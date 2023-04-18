@@ -1,0 +1,63 @@
+---
+- name: Nginx App Protect Installation
+  become: yes
+  hosts: all
+
+  tasks:
+    - name: Create the /etc/ssl/nginx/ directory
+      file:
+        path: /etc/ssl/nginx
+        state: directory
+        mode: '1777'
+    - name: Copy SSL keys to the Server
+      copy:
+        src: "{{ item }}"
+        dest: /etc/ssl/nginx
+        mode: "1777"
+      with_items:
+        - /home/ubuntu/Downloads/nginx-repo.crt
+        - /home/ubuntu/Downloads/nginx-repo.key
+    - name: Install prerequisites
+      apt:
+        name: "{{ item }}"
+        update_cache: yes
+        state: present
+      with_items:
+        - apt-transport-https
+        - lsb-release
+        - ca-certificates
+        - wget
+        - gnupg2
+    - name: Download and add NGINX signing keys
+      apt_key:
+        url: "{{ item }}"
+        state: present
+      with_items:
+        - https://cs.nginx.com/static/keys/nginx_signing.key
+        - https://cs.nginx.com/static/keys/app-protect-security-updates.key
+    - name: Add NGINX Plus and NGINX App Protect WAF repositories
+      lineinfile:
+        path: "/etc/apt/sources.list.d/{{ item.name }}"
+        line: "deb {{ item.url }} {{ ansible_lsb.codename }} nginx-plus\n"
+        create: yes
+        mode: '1777'
+        state: present
+      loop:
+        - { name: 'nginx-plus.list', url: 'https://pkgs.nginx.com/plus/ubuntu'}
+        - { name: 'nginx-app-protect.list', url: 'https://pkgs.nginx.com/app-protect/ubuntu'}
+        - { name: 'app-protect-security-updates.list', url: 'https://pkgs.nginx.com/app-protect-security-updates/ubuntu'}
+    - name: Download the apt configuration to /etc/apt/apt.conf.d
+      get_url:
+        dest: /etc/apt/apt.conf.d
+        url: https://cs.nginx.com/static/files/90pkgs-nginx
+        mode: "1777"
+    - name: Install App Protect
+      apt:
+        name: app-protect
+        update_cache: yes
+        state: present
+    - name: Start Nginx Service
+      systemd:
+        name: nginx 
+        state: restarted
+        enabled: yes
