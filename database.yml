@@ -29,3 +29,11 @@ tasks:
       src: /usr/share/nginx/html/DVWA/config/config.inc.php.dist
       dest: /usr/share/nginx/html/DVWA/config/config.inc.php
       mode: '0644'
+  - name: Modify DVWA configuration file
+    replace:
+      path: /usr/share/nginx/html/DVWA/config/config.inc.php
+      regexp: "{{ item.regexp }}"
+      replace: "{{ item.replace }}"
+    loop:
+      - {replace: "user", regexp: ".*\\$_DVWA\\[ 'db_user' \\]\\s*=.*"}
+      - {replace: "pass", regexp: ".*\\$_DVWA\\[ 'db_password' \\]\\s*=.*"}
