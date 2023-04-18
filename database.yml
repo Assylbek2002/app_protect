@@ -1,0 +1,31 @@
+---
+name: Create database and user for DVWA
+become: yes
+hosts: all
+vars:
+  db_name: dvwa
+  db_user: user
+  db_password: pass
+  mysql_login: root
+  mysql_password: ""
+tasks:
+  - name: Create Database
+    mysql_db:
+      name: "{{ db_name: }}"
+      state: present
+      login_user: "{{ mysql_login }}"
+      login_password: "{{ mysql_password }}"
+  - name: Create User with Password 
+    mysql_user:
+      name: "{{ db_user }}"
+      password: "{{ db_password }}"
+      host: localhost
+      state: present
+      priv: "{{ db_name }}.*:ALL,GRANT"
+      login_user: "{{ mysql_login }}"
+      login_password: "{{ mysql_password }}"
+  - name: Update DVWA configuration file
+    copy:
+      src: /usr/share/nginx/html/DVWA/config/config.inc.php.dist
+      dest: /usr/share/nginx/html/DVWA/config/config.inc.php
+      mode: '0644'

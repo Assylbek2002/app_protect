@@ -21,14 +21,3 @@
       git:
         repo: https://github.com/ethicalhack3r/DVWA.git
         dest: /usr/share/nginx/html
-    - name: Create DVWA database
-      mysql_db:
-        name: dvwa 
-        state: present
-      mysql_user:
-        name: user 
-        password: pass 
-        priv: "dvwa.*:ALL,GRANT"
-        host: localhost
-        state: present
-        login_user: root
