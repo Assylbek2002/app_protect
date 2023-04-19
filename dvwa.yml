@@ -2,10 +2,11 @@
 - name: Install DVWA Application
   become: yes
   hosts: all
-
+  vars:
+    repo: 'https://github.com/ethicalhack3r/DVWA.git'
   tasks:
     - name: Install prerequisites
-      apt: 
+      apt:
         name: "{{ item }}"
         state: present
       with_items:
@@ -17,7 +18,9 @@
         - php-json
         - php-mbstring
         - php-xml
-    - name: Clone repositories
+    - name: Clone repository
       git:
-        repo: https://github.com/ethicalhack3r/DVWA.git
-        dest: /usr/share/nginx/html
+        repo: "{{ repo }}"
+        dest: "{{ '/usr/share/nginx/html/' ~ repo_name }}"
+      vars:
+        repo_name: "{{ repo.rsplit('/', 1)[-1].split('.', 1)[0] }}"

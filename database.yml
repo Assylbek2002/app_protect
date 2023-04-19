@@ -1,39 +1,51 @@
 ---
-name: Create database and user for DVWA
-become: yes
-hosts: all
-vars:
-  db_name: dvwa
-  db_user: user
-  db_password: pass
-  mysql_login: root
-  mysql_password: ""
-tasks:
-  - name: Create Database
-    mysql_db:
-      name: "{{ db_name: }}"
-      state: present
-      login_user: "{{ mysql_login }}"
-      login_password: "{{ mysql_password }}"
-  - name: Create User with Password 
-    mysql_user:
-      name: "{{ db_user }}"
-      password: "{{ db_password }}"
-      host: localhost
-      state: present
-      priv: "{{ db_name }}.*:ALL,GRANT"
-      login_user: "{{ mysql_login }}"
-      login_password: "{{ mysql_password }}"
-  - name: Update DVWA configuration file
-    copy:
-      src: /usr/share/nginx/html/DVWA/config/config.inc.php.dist
-      dest: /usr/share/nginx/html/DVWA/config/config.inc.php
-      mode: '0644'
-  - name: Modify DVWA configuration file
-    replace:
-      path: /usr/share/nginx/html/DVWA/config/config.inc.php
-      regexp: "{{ item.regexp }}"
-      replace: "{{ item.replace }}"
-    loop:
-      - {replace: "user", regexp: ".*\\$_DVWA\\[ 'db_user' \\]\\s*=.*"}
-      - {replace: "pass", regexp: ".*\\$_DVWA\\[ 'db_password' \\]\\s*=.*"}
+- name: Create database and user for DVWA
+  become: yes
+  hosts: all
+  vars:
+    db_name: dvwa
+    db_user: user
+    db_password: pass
+    mysql_login: root
+    mysql_password: ubuntu
+  tasks:
+    - name: install pip3
+      apt:
+        name: python3-pip
+        state: present
+    - name: Make sure pymysql is present
+      become: yes # needed if the other tasks are not played as root
+      pip:
+        name: pymysql
+        state: present
+    - name: Create Database
+      mysql_db:
+        name: "{{ db_name }}"
+        state: present
+        login_user: "{{ mysql_login }}"
+        login_password: "{{ mysql_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+    - name: Create User with Password
+      mysql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        host: localhost
+        state: present
+        priv: "{{ db_name }}.*:ALL,GRANT"
+        login_user: "{{ mysql_login }}"
+        login_password: "{{ mysql_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+    - name: Update DVWA configuration file
+      copy:
+        src: /usr/share/nginx/html/DVWA/config/config.inc.php.dist
+        dest: /usr/share/nginx/html/DVWA/config/config.inc.php
+        remote_src: yes
+        mode: '0644'
+    - name: Modify DVWA configuration file
+      replace:
+        path: /usr/share/nginx/html/DVWA/config/config.inc.php
+        regexp: "{{ item.regexp }}"
+        replace: "{{ item.replace }}"
+      loop:
+        - {replace: '$_DVWA[ "db_user" ] = "user";', regexp: ".*\\$_DVWA\\[ 'db_user' \\]\\s*=.*"}
+        - {replace: '$_DVWA[ "db_password" ] = "pass";', regexp: ".*\\$_DVWA\\[ 'db_password' \\]\\s*=.*"}
