@@ -12,11 +12,28 @@
         src: /home/ubuntu/Desktop/app_protect/nginx.conf.j2
         dest: /etc/nginx/conf.d/dvwa.conf
         mode: '0644'
-    - name: Reload service
-      systemd:
-        state: restarted
-        name: nginx
     - name: Changing permission /var/run/php/php7.4-fpm.sock
       file:
         dest: /var/run/php/php7.4-fpm.sock
         mode: '0667'
+    - name: Enable App Protect
+      lineinfile:
+        path: /etc/nginx/nginx.conf
+        insertafter: '^worker_processes.*auto;$'
+        line: "load_module modules/ngx_http_app_protect_module.so;"
+    - name: App Protect Configuration
+      blockinfile:
+        path: /etc/nginx/nginx.conf
+        insertafter: 'keepalive_timeout  65;'
+        block: |
+           # # # 
+               app_protect_enable on;
+               app_protect_policy_file "/etc/app_protect/conf/NginxDefaultPolicy.json";
+               app_protect_security_log_enable on;
+               app_protect_security_log "/etc/app_protect/conf/log_default.json" /var/log/app_protect/security.log;
+        marker: ""
+    - name: Reload service
+      systemd:
+        state: restarted
+        name: nginx
+
