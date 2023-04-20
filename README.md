@@ -6,4 +6,5 @@
 Если хотите установить приложение DVWA c защитой WAF:
  - ansible-playbook install.yml
  - ansible-playbook dvwa.yml
+
 После выполнения этих действий необходимо сделать reboot сервера.
