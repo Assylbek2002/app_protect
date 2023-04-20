@@ -46,6 +46,7 @@
         - { name: 'nginx-plus.list', url: 'https://pkgs.nginx.com/plus/ubuntu'}
         - { name: 'nginx-app-protect.list', url: 'https://pkgs.nginx.com/app-protect/ubuntu'}
         - { name: 'app-protect-security-updates.list', url: 'https://pkgs.nginx.com/app-protect-security-updates/ubuntu'}
+        # - { name: 'nginx-app-protect-dos.list', url: 'https://pkgs.nginx.com/app-protect-dos/ubuntu'}
     - name: Download the apt configuration to /etc/apt/apt.conf.d
       get_url:
         dest: /etc/apt/apt.conf.d
@@ -54,8 +55,13 @@
     - name: Install App Protect
       apt:
         name: app-protect
+        # name: "{{ item }}"
         update_cache: yes
         state: present
+      # with_items:
+          # - app-protect
+          # - app-protect-dos
+          # - app-protect-dos-ebpf
     - name: Enable App Protect
       lineinfile:
         path: /etc/nginx/nginx.conf
@@ -71,3 +77,7 @@
               app_protect_policy_file "/etc/app_protect/conf/NginxDefaultPolicy.json";
               app_protect_security_log_enable on;
               app_protect_security_log "/etc/app_protect/conf/log_default.json" /var/log/app_protect/security.log;
+    - name: Start NGINX Service
+      systemd:
+        name: nginx
+        state: started
