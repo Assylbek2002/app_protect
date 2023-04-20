@@ -4,6 +4,14 @@
   hosts: all
   vars:
     repo: 'https://github.com/ethicalhack3r/DVWA.git'
+    db_name: dvwa
+    db_user: user
+    db_password: pass
+    mysql_login: root
+    mysql_password: ubuntu
+    server_name: "{{ ansible_host }}"
+    root_directory: '/usr/share/nginx/html/DVWA'
+    index_file: index.php
   tasks:
     - name: Install prerequisites
       apt:
@@ -24,3 +32,56 @@
         dest: "{{ '/usr/share/nginx/html/' ~ repo_name }}"
       vars:
         repo_name: "{{ repo.rsplit('/', 1)[-1].split('.', 1)[0] }}"
+    - name: install pip3
+      apt:
+        name: python3-pip
+        state: present
+    - name: Make sure pymysql is present
+      become: yes # needed if the other tasks are not played as root
+      pip:
+        name: pymysql
+        state: present
+    - name: Create Database
+      mysql_db:
+        name: "{{ db_name }}"
+        state: present
+        login_user: "{{ mysql_login }}"
+        login_password: "{{ mysql_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+    - name: Create User with Password
+      mysql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        host: localhost
+        state: present
+        priv: "{{ db_name }}.*:ALL,GRANT"
+        login_user: "{{ mysql_login }}"
+        login_password: "{{ mysql_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+    - name: Update DVWA configuration file
+      copy:
+        src: /usr/share/nginx/html/DVWA/config/config.inc.php.dist
+        dest: /usr/share/nginx/html/DVWA/config/config.inc.php
+        remote_src: yes
+        mode: '0644'
+    - name: Modify DVWA configuration file
+      replace:
+        path: /usr/share/nginx/html/DVWA/config/config.inc.php
+        regexp: "{{ item.regexp }}"
+        replace: "{{ item.replace }}"
+      loop:
+        - {replace: '$_DVWA[ "db_user" ] = "user";', regexp: ".*\\$_DVWA\\[ 'db_user' \\]\\s*=.*"}
+        - {replace: '$_DVWA[ "db_password" ] = "pass";', regexp: ".*\\$_DVWA\\[ 'db_password' \\]\\s*=.*"}
+    - name: Template nginx file
+      template:
+        src: /home/ubuntu/Desktop/app_protect/nginx.conf.j2
+        dest: /etc/nginx/conf.d/dvwa.conf
+        mode: '0644'
+    - name: Changing permission /var/run/php/php7.4-fpm.sock
+      file:
+        dest: /var/run/php/php7.4-fpm.sock
+        mode: '0667'
+    - name: Reload Nginx
+      systemd:
+        state: reloaded
+        name: nginx
